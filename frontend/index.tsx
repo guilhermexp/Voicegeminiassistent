@@ -1493,7 +1493,7 @@ NUNCA diga que não pode pesquisar. Você SEMPRE pode pesquisar.`;
         if (!this.isRecording) return;
         
         // Check if session is still active and connected before sending audio data
-        if (!this.session || this.connectionState !== 'connected') {
+        if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
           // Session not available - stopping recording
           this.stopRecording();
           return;
