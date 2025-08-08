@@ -1758,7 +1758,7 @@ Responda em português.`;
       const api = await (await import('./api-base')).detectApiBase();
       const url = (await import('./api-base')).then(m=>m.httpUrl(api.base, api.withApi, '/genai/generate'));
       const urlStr = await url;
-      const response = await fetch(url, {
+      const response = await fetch(urlStr, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
