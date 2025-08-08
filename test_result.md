@@ -52,7 +52,7 @@ frontend:
     implemented: true
     working: false
     file: "/app/frontend/index.tsx"
-    stuck_count: 1
+    stuck_count: 2
     priority: "high"
     needs_retesting: false
     status_history:
@@ -62,6 +62,9 @@ frontend:
       - working: false
         agent: "testing"
         comment: "❌ CRITICAL BACKEND API INTEGRATION FAILURE: 1) Frontend loads correctly at http://localhost:3000 with 3D sphere and 'Conectado' status. 2) WebSocket connection appears functional (no 'ws is undefined' errors). 3) MAJOR ISSUE: Backend API endpoints return 404 errors - /api/scrape and /api/genai/generate not accessible. 4) URL analysis with https://example.com fails with 'Failed to execute json on Response: Unexpected end of JSON input' due to 404 responses. 5) Tavily search with 'tendências IA 2025' fails with TypeError: h.trim is not a function. 6) Core functionality broken despite UI working. Backend proxy/routing issue preventing API calls."
+      - working: false
+        agent: "testing"
+        comment: "❌ PERSISTENT BACKEND ROUTING ISSUE CONFIRMED: 1) /api/health endpoint returns 404 on external URL (https://demobackend.emergentagent.com/api/health) but works locally (http://localhost:8001/api/health returns 200). 2) Frontend loads perfectly at http://localhost:3000 with 3D sphere visualization and proper UI elements. 3) Connection status shows 'Conectando ao assistente...' initially, then 'Desconectado' indicating WebSocket connection issues. 4) URL analysis with https://example.com triggers HTTP 404 error on /api/scrape endpoint. 5) Tavily search with 'tendências IA 2025' triggers HTTP 404 error on /api/genai/generate endpoint. 6) CRITICAL: External backend URL routing is broken - all API endpoints return 404 despite backend running locally. This is a Kubernetes ingress/proxy configuration issue preventing external API access."
 
 metadata:
   created_by: "testing_agent"
