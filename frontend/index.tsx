@@ -1930,7 +1930,9 @@ Responda em português.`;
       }
 
       this.updateStatus('Gerando análise com a IA...');
-      const response = await fetch(`${(import.meta as any).env?.REACT_APP_BACKEND_URL || ''}/api/genai/generate`, {
+      const base = (import.meta as any).env?.REACT_APP_BACKEND_URL || '';
+      const url = base.endsWith('/api') ? `${base}/genai/generate` : `${base}/api/genai/generate`;
+      const response = await fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
