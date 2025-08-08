@@ -34,7 +34,9 @@ app.add_middleware(
 )
 
 # Configure Google GenAI client
-genai.configure(api_key=os.environ.get("GOOGLE_API_KEY") or os.environ.get("GEMINI_API_KEY"))
+# google-genai >=1.x client no longer needs global configure; we pass key in Client()
+# genai.configure(...) not used.
+
 
 
 class TavilyRequest(BaseModel):
