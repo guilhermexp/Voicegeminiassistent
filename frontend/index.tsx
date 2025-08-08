@@ -847,10 +847,9 @@ export class GdmLiveAudio extends LitElement {
     this.client = null as any;
     // Initialize WS proxy connection instead of direct Gemini session
     try {
-      const apiInfo = await (await import('./api-base')).getApiBase();
-      const backend = apiInfo.base; const withApi = apiInfo.withApi;
-      const wsRoot = (await import('./api-base')).then(m=>m.toWsUrl(backend));
-      const wsUrl = `${await wsRoot}${withApi ? '' : ''}/api/ws/` + crypto.randomUUID();
+      const api = await (await import('./api-base')).detectApiBase();
+      const wsRoot = (await import('./api-base')).then(m=>m.wsRootFromHttp(api.base));
+      const wsUrl = `${await wsRoot}/api/ws/` + crypto.randomUUID();
       this.ws = new WebSocket(wsUrl);
       this.ws.onopen = () => {
         this.connectionState = 'connected';
