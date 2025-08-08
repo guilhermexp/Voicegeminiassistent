@@ -912,6 +912,12 @@ export class GdmLiveAudio extends LitElement {
     }
 
     this.connectionState = 'connecting';
+    // No longer creating a Gemini session directly; we rely on WS connection
+    if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+      this.connectionState = 'connected';
+      this.updateStatus('Conectado');
+      return;
+    }
 
     if (this.session) {
       try {
