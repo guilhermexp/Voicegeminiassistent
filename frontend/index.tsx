@@ -1871,8 +1871,14 @@ Responda em português.`;
 
       this.updateStatus('Gerando análise com a IA...');
       const response = await fetch(`${import.meta.env.VITE_BACKEND_URL || ''}/api/genai/generate`, {
-        ...generateContentConfig,
-        contents: contents,
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: generateContentConfig.model || 'gemini-2.5-flash',
+          contents: contents,
+          tools: generateContentConfig.tools,
+          generationConfig: generateContentConfig.generationConfig,
+        }),
       });
 
       this.analysisProgress = 100;
