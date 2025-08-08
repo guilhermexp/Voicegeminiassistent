@@ -27,7 +27,7 @@ export async function scrapeUrl(url: string): Promise<ScrapeResult> {
   }
 
   try {
-    const response = await fetch('https://api.firecrawl.dev/v1/scrape', {
+    const response = await fetch(`${import.meta.env.VITE_BACKEND_URL || ''}/api/scrape`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
