@@ -16,7 +16,7 @@ export interface ScrapeResult {
 }
 
 export async function scrapeUrl(url: string): Promise<ScrapeResult> {
-  const firecrawlApiKey = import.meta.env.VITE_FIRECRAWL_API_KEY || 'fc-b9df4e7aa9834cdfb37aa7a3072a72af';
+  const firecrawlApiKey = import.meta.env.VITE_FIRECRAWL_API_KEY || '';// unused on FE now
 
   if (!firecrawlApiKey) {
     console.error('Firecrawl API key is not set.');
