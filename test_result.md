@@ -71,11 +71,9 @@ metadata:
 
 test_plan:
   current_focus:
-    - "Health Check API Endpoint"
-    - "Tavily Search API Proxy"
-    - "Firecrawl Scrape API Proxy"
-    - "Google GenAI Generate API Proxy"
-  stuck_tasks: []
+    - "Frontend Integration with Backend APIs"
+  stuck_tasks:
+    - "Frontend Integration with Backend APIs"
   test_all: false
   test_priority: "high_first"
 
