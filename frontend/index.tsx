@@ -1517,7 +1517,7 @@ NUNCA diga que não pode pesquisar. Você SEMPRE pode pesquisar.`;
         }
 
         try {
-          this.session.sendRealtimeInput({media: createBlob(pcmData)});
+          try { this.ws?.send(JSON.stringify({ type: 'audio_chunk', data: btoa(String.fromCharCode(...new Uint8Array(new Int16Array(pcmData.map(v=>v*32768)).buffer))) })); } catch(e) { /* ignore */ }
         } catch (error) {
           console.error('Error sending audio data:', error);
           
