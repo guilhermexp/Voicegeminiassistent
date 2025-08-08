@@ -1755,13 +1755,9 @@ Responda em português.`;
       }
 
       this.updateStatus('Gerando análise com a IA...');
-      const base = (import.meta as any).env?.REACT_APP_BACKEND_URL || '';
-      let url: string;
-      if (base) {
-        url = base.endsWith('/api') ? `${base}/genai/generate` : `${base}/api/genai/generate`;
-      } else {
-        url = `/api/genai/generate`;
-      }
+      const api = await (await import('./api-base')).detectApiBase();
+      const url = (await import('./api-base')).then(m=>m.httpUrl(api.base, api.withApi, '/genai/generate'));
+      const urlStr = await url;
       const response = await fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
