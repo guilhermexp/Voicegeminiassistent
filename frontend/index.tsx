@@ -845,6 +845,56 @@ export class GdmLiveAudio extends LitElement {
     //   apiKey: import.meta.env.VITE_GEMINI_API_KEY || import.meta.env.VITE_GOOGLE_API_KEY,
     // });
     this.client = null as any;
+    // Initialize WS proxy connection instead of direct Gemini session
+    try {
+      const backend = (import.meta as any).env?.REACT_APP_BACKEND_URL || '';
+      const wsUrl = backend.replace('https://','wss://').replace('http://','ws://') + '/api/ws/' + crypto.randomUUID();
+      this.ws = new WebSocket(wsUrl);
+      this.ws.onopen = () => {
+        this.connectionState = 'connected';
+        this.updateStatus('Conectado');
+        this.logEvent('Conexão WS com backend estabelecida.', 'connect');
+      };
+      this.ws.onclose = () => {
+        this.connectionState = 'disconnected';
+        this.logEvent('Conexão WS fechada.', 'disconnect');
+      };
+      this.ws.onerror = (e) => {
+        this.connectionState = 'error';
+        this.updateError('Erro na conexão WS');
+      };
+      this.ws.onmessage = (ev) => {
+        try {
+          const msg = JSON.parse(ev.data);
+          if (msg.type === 'gemini_response') {
+            if (msg.audio) {
+              // Received base64 PCM16 from backend (already base64)
+              // Decode and play using existing pipeline
+              (async () => {
+                this.nextStartTime = Math.max(this.nextStartTime, this.outputAudioContext.currentTime);
+                const audioBytes = Uint8Array.from(atob(msg.audio), c => c.charCodeAt(0));
+                const audioBuffer = await decodeAudioData(audioBytes, this.outputAudioContext, 24000, 1);
+                const source = this.outputAudioContext.createBufferSource();
+                source.buffer = audioBuffer;
+                source.connect(this.outputNode);
+                source.start(this.nextStartTime);
+                this.nextStartTime += audioBuffer.duration;
+                this.sources.add(source);
+              })();
+            }
+            if (msg.text) {
+              this.logEvent(msg.text, 'info');
+            }
+          } else if (msg.type === 'error') {
+            this.updateError(msg.message || 'Erro no backend');
+          }
+        } catch (e) {
+          // ignore parse errors
+        }
+      };
+    } catch (e) {
+      this.updateError('Falha ao iniciar WS com backend');
+    }
 
     this.outputNode.connect(this.outputAudioContext.destination);
 
