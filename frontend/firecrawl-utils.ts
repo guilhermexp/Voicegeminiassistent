@@ -28,7 +28,12 @@ export async function scrapeUrl(url: string): Promise<ScrapeResult> {
 
   try {
     const base = (import.meta as any).env?.REACT_APP_BACKEND_URL || '';
-    const apiUrl = base.endsWith('/api') ? `${base}/scrape` : `${base}/api/scrape`;
+    let apiUrl: string;
+    if (base) {
+      apiUrl = base.endsWith('/api') ? `${base}/scrape` : `${base}/api/scrape`;
+    } else {
+      apiUrl = `/api/scrape`;
+    }
     const response = await fetch(apiUrl, {
       method: 'POST',
       headers: {
