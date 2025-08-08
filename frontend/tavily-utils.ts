@@ -50,7 +50,7 @@ export async function searchTavily(
   };
 
   try {
-    const response = await fetch(`${import.meta.env.VITE_BACKEND_URL || ''}/api/search/tavily`, {
+    const response = await fetch(`${(import.meta as any).env?.REACT_APP_BACKEND_URL || ''}/api/search/tavily`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
