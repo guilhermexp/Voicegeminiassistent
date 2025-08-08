@@ -977,7 +977,8 @@ NUNCA diga que não pode pesquisar. Você SEMPRE pode pesquisar.`;
     const model = 'gemini-2.5-flash-preview-native-audio-dialog';
     this.updateStatus('Conectando ao assistente...');
     try {
-      this.session = await this.client.live.connect({
+      // Use WS proxy now; skip direct live.connect
+      return; // session managed by backend WS
         model: model,
         systemInstruction: this.systemInstruction,
         callbacks: {
