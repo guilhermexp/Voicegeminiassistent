@@ -1510,7 +1510,7 @@ NUNCA diga que não pode pesquisar. Você SEMPRE pode pesquisar.`;
         const pcmData = inputBuffer.getChannelData(0);
 
         // Additional safety check: ensure the session exists and is properly connected
-        if (!this.session || typeof this.session.sendRealtimeInput !== 'function') {
+        if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
           // Session unavailable - stopping recording
           this.stopRecording();
           return;
