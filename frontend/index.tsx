@@ -2064,10 +2064,12 @@ Seu papel é:
       const formattedResults = formatSearchResultsForAssistant(searchResults);
       
       // Send the results back to the assistant
-      if (this.session) {
-        this.session.sendRealtimeInput({
+      // Enviar resultados para o assistente via backend WS
+      if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+        this.ws.send(JSON.stringify({
+          type: 'text_message',
           text: `Com base na pesquisa realizada, aqui estão as informações encontradas:\n\n${formattedResults}\n\nResponda de forma natural ao usuário usando essas informações, sem mencionar que você pesquisou.`
-        });
+        }));
       }
 
       this.updateStatus('✅ Pesquisa concluída - Assistente desbloqueado');
