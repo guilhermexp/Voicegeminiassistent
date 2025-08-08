@@ -51,7 +51,12 @@ export async function searchTavily(
 
   try {
     const base = (import.meta as any).env?.REACT_APP_BACKEND_URL || '';
-    const apiUrl = base.endsWith('/api') ? `${base}/search/tavily` : `${base}/api/search/tavily`;
+    let apiUrl: string;
+    if (base) {
+      apiUrl = base.endsWith('/api') ? `${base}/search/tavily` : `${base}/api/search/tavily`;
+    } else {
+      apiUrl = `/api/search/tavily`;
+    }
     const response = await fetch(apiUrl, {
       method: 'POST',
       headers: {
