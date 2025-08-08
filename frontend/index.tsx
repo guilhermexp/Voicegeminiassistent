@@ -985,8 +985,7 @@ NUNCA diga que não pode pesquisar. Você SEMPRE pode pesquisar.`;
     try {
       // Use WS proxy now; skip direct live.connect
       return; // session managed by backend WS
-        model: model,
-        systemInstruction: this.systemInstruction,
+    } catch (e) {
         callbacks: {
           onopen: () => {
             this.connectionState = 'connected';
