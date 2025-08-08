@@ -52,7 +52,7 @@ frontend:
     implemented: true
     working: false
     file: "/app/frontend/index.tsx"
-    stuck_count: 2
+    stuck_count: 3
     priority: "high"
     needs_retesting: false
     status_history:
@@ -65,6 +65,9 @@ frontend:
       - working: false
         agent: "testing"
         comment: "❌ PERSISTENT BACKEND ROUTING ISSUE CONFIRMED: 1) /api/health endpoint returns 404 on external URL (https://demobackend.emergentagent.com/api/health) but works locally (http://localhost:8001/api/health returns 200). 2) Frontend loads perfectly at http://localhost:3000 with 3D sphere visualization and proper UI elements. 3) Connection status shows 'Conectando ao assistente...' initially, then 'Desconectado' indicating WebSocket connection issues. 4) URL analysis with https://example.com triggers HTTP 404 error on /api/scrape endpoint. 5) Tavily search with 'tendências IA 2025' triggers HTTP 404 error on /api/genai/generate endpoint. 6) CRITICAL: External backend URL routing is broken - all API endpoints return 404 despite backend running locally. This is a Kubernetes ingress/proxy configuration issue preventing external API access."
+      - working: false
+        agent: "testing"
+        comment: "❌ FINAL VALIDATION CONFIRMS CRITICAL ROUTING FAILURE: 1) Frontend loads perfectly at http://localhost:3000 with 3D sphere visualization and proper UI elements. 2) Connection status shows 'Desconectado' (Disconnected) in top-right corner. 3) URL analysis with https://example.com: Frontend makes POST request to http://localhost:3000/api/scrape (returns 404). Status shows 'Conectando ao assistente...' but fails. 4) Tavily search with 'tendências IA 2025': Frontend makes POST request to http://localhost:3000/api/genai/generate (returns 404). 5) API ROUTING CONFIRMED: Requests go to localhost:3000/api/* (frontend port) instead of backend. 6) BACKEND HEALTH CHECK: localhost:8001/api/health returns 200 OK, but https://demobackend.emergentagent.com/api/health returns 404 'Route not found'. 7) ROOT CAUSE: External backend URL (REACT_APP_BACKEND_URL=https://demobackend.emergentagent.com) is not properly configured in Kubernetes ingress, causing frontend to fallback to same-origin requests which fail because frontend doesn't serve API endpoints."
 
 metadata:
   created_by: "testing_agent"
