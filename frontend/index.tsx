@@ -1567,6 +1567,7 @@ NUNCA diga que não pode pesquisar. Você SEMPRE pode pesquisar.`;
 
     // Handle fallback recording cleanup
     if (this.usingFallback) {
+      if (this.ws && this.ws.readyState === WebSocket.OPEN) { try { this.ws.send(JSON.stringify({ type: 'audio_stream_end' })); } catch(e) {} }
       if (this.mediaRecorder && this.mediaRecorder.state === 'recording') {
         this.mediaRecorder.stop();
       }
