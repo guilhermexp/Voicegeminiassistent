@@ -1757,7 +1757,12 @@ Responda em português.`;
 
       this.updateStatus('Gerando análise com a IA...');
       const base = (import.meta as any).env?.REACT_APP_BACKEND_URL || '';
-      const url = base.endsWith('/api') ? `${base}/genai/generate` : `${base}/api/genai/generate`;
+      let url: string;
+      if (base) {
+        url = base.endsWith('/api') ? `${base}/genai/generate` : `${base}/api/genai/generate`;
+      } else {
+        url = `/api/genai/generate`;
+      }
       const response = await fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
