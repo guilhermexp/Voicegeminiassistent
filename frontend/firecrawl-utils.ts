@@ -31,7 +31,7 @@ export async function scrapeUrl(url: string): Promise<ScrapeResult> {
     const api = await (await import('./api-base')).detectApiBase();
     const apiUrl = (await import('./api-base')).then(m=>m.httpUrl(api.base, api.withApi, '/scrape'));
     const realUrl = await apiUrl;
-    const response = await fetch(apiUrl, {
+    const response = await fetch(realUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
