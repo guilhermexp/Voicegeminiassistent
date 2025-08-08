@@ -1870,7 +1870,7 @@ Responda em português.`;
       }
 
       this.updateStatus('Gerando análise com a IA...');
-      const response = await this.client.models.generateContent({
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL || ''}/api/genai/generate`, {
         ...generateContentConfig,
         contents: contents,
       });
