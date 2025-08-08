@@ -208,7 +208,7 @@ async def live_ws(websocket: WebSocket, client_id: str):
     await manager.connect(client_id, websocket)
 
     # Initialize GenAI async client
-    client = genai.Client()
+    client = genai.Client(api_key=os.environ.get("GOOGLE_API_KEY") or os.environ.get("GEMINI_API_KEY"))
 
     # Configure model/session
     model = os.environ.get("GENAI_LIVE_MODEL", "gemini-2.5-flash-preview-native-audio-dialog")
