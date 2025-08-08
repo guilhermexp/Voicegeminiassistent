@@ -27,7 +27,7 @@ export async function scrapeUrl(url: string): Promise<ScrapeResult> {
   }
 
   try {
-    const response = await fetch(`${import.meta.env.VITE_BACKEND_URL || ''}/api/scrape`, {
+    const response = await fetch(`${(import.meta as any).env?.REACT_APP_BACKEND_URL || ''}/api/scrape`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
