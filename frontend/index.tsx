@@ -2086,10 +2086,11 @@ Seu papel é:
       this.logEvent(`❌ ERRO na pesquisa: ${(error as Error).message}`, 'error');
       
       // Inform the assistant about the error
-      if (this.session) {
-        this.session.sendRealtimeInput({
+      if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+        this.ws.send(JSON.stringify({
+          type: 'text_message',
           text: `Desculpe, ocorreu um erro ao realizar a pesquisa. Por favor, tente responder com base no seu conhecimento atual.`
-        });
+        }));
       }
     } finally {
       this.isSearching = false;
