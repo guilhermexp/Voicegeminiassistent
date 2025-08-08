@@ -124,7 +124,7 @@ export class GdmLiveAudio extends LitElement {
   private speechRecognition?: SpeechRecognition;
 
   private client: GoogleGenAI;
-  private session: Session;
+  private session: Session; private ws?: WebSocket;
   private inputAudioContext = new (window.AudioContext ||
     (window as any).webkitAudioContext)({sampleRate: 16000});
   private outputAudioContext = new (window.AudioContext ||
