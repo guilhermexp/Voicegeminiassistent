@@ -840,9 +840,11 @@ export class GdmLiveAudio extends LitElement {
     this.logEvent('Assistente inicializado.', 'info');
     this.initAudio();
 
-    this.client = new GoogleGenAI({
-      apiKey: import.meta.env.VITE_GEMINI_API_KEY || import.meta.env.VITE_GOOGLE_API_KEY,
-    });
+    // Client-side direct GoogleGenAI disabled; now using backend WS proxy
+    // this.client = new GoogleGenAI({
+    //   apiKey: import.meta.env.VITE_GEMINI_API_KEY || import.meta.env.VITE_GOOGLE_API_KEY,
+    // });
+    this.client = null as any;
 
     this.outputNode.connect(this.outputAudioContext.destination);
 
