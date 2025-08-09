@@ -12,6 +12,11 @@ import {marked} from 'marked';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 
+
+// Carregamento dinâmico dos módulos de PDF em runtime para evitar conflitos de bundling
+let pdfMake: any;
+let htmlToPdfmakeFn: any;
+
 import {
   createBlob,
   decode,
@@ -101,6 +106,7 @@ export class GdmLiveAudio extends LitElement {
   @state() analysisResult = '';
   @state() showAnalysisModal = false;
   @state() showTimelineModal = false;
+  @state() showSettings = false;
   @state() searchResults: SearchResult[] = [];
   @state() timelineEvents: TimelineEvent[] = [];
   @state() processedContentInfo: {title: string; source: string} | null = null;
@@ -141,17 +147,37 @@ export class GdmLiveAudio extends LitElement {
   static styles = css`
     :host {
       --analysis-panel-width: clamp(320px, 40vw, 600px);
+      display: block;
+      position: relative;
+      width: 100vw;
+      height: 100vh;
+      overflow: hidden;
+
+      /* Design tokens */
+      --color-bg: #0b0f17;
+      --color-surface: rgba(16, 18, 24, 0.7);
+      --color-surface-2: rgba(30, 34, 44, 0.7);
+      --color-text: rgba(255, 255, 255, 0.92);
+      --color-muted: rgba(235, 243, 255, 0.6);
+      --color-primary: #6ea8ff;
+      --color-primary-strong: #3e7bff;
+      --ring: 0 0 0 2px rgba(110, 168, 255, 0.3), 0 0 0 6px rgba(110, 168, 255, 0.15);
+      --shadow-1: 0 8px 24px rgba(0, 0, 0, 0.35);
+      --shadow-2: 0 12px 40px rgba(0, 0, 0, 0.45);
     }
     .app-content {
       position: relative;
       width: 100vw;
       height: 100vh;
       overflow: hidden;
-      transition: padding-left 0.35s ease;
-      padding-left: 0;
+      display: flex;
+      flex-direction: row;
     }
-    .app-content.with-panel {
-      padding-left: var(--analysis-panel-width);
+
+    .main-stage {
+      position: relative;
+      flex: 1 1 auto;
+      height: 100%;
     }
 
     gdm-live-audio-visuals-3d {
@@ -161,19 +187,7 @@ export class GdmLiveAudio extends LitElement {
       height: 100%;
       display: block;
     }
-    /* Reposiciona elementos flutuantes quando painel abre */
-    .app-content.with-panel .input-container {
-      left: calc(var(--analysis-panel-width) + 50%);
-      transform: translateX(-50%);
-    }
-    .app-content.with-panel #status {
-      left: var(--analysis-panel-width);
-      right: 0;
-    }
-    .app-content.with-panel .bottom-container {
-      left: calc(var(--analysis-panel-width) + 50%);
-      transform: translateX(-50%);
-    }
+    /* Sem regras especiais: os elementos flutuantes centralizam dentro de .main-stage */
     #status {
       position: absolute;
       bottom: calc(2vh + 100px); /* Position above the control bar */
@@ -197,8 +211,7 @@ export class GdmLiveAudio extends LitElement {
       top: 2vh;
       left: 50%;
       transform: translateX(-50%);
-      width: 90%;
-      max-width: 550px;
+      width: min(92%, 760px);
       z-index: 20;
       display: flex;
       flex-direction: column;
@@ -209,41 +222,45 @@ export class GdmLiveAudio extends LitElement {
       width: 100%;
       display: flex;
       gap: 8px;
-      background: rgba(0, 0, 0, 0.2);
-      border: 1px solid rgba(255, 255, 255, 0.2);
-      border-radius: 24px;
-      padding: 4px;
-      backdrop-filter: blur(10px);
-      -webkit-backdrop-filter: blur(10px);
+      background: linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0.02));
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      border-radius: 28px;
+      padding: 6px;
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      box-shadow: var(--shadow-1);
     }
 
     .input-form input[type='text'] {
       flex-grow: 1;
       border: none;
-      background: transparent;
-      color: white;
-      padding: 10px 18px;
-      font-size: 14px;
+      background: rgba(255,255,255,0.03);
+      color: var(--color-text);
+      padding: 12px 18px;
+      font-size: 15px;
       outline: none;
       height: 40px;
       box-sizing: border-box;
+      border-radius: 22px;
     }
+    .input-form input::placeholder { color: rgba(235, 243, 255, 0.55); }
 
     .input-form button {
       outline: none;
-      border: none;
-      color: white;
-      border-radius: 20px;
-      background: rgba(80, 120, 255, 0.5);
+      border: 1px solid rgba(255, 255, 255, 0.22);
+      color: var(--color-text);
+      border-radius: 22px;
+      background: linear-gradient(180deg, rgba(110,168,255,0.45), rgba(62,123,255,0.55));
       height: 40px;
       cursor: pointer;
       font-size: 14px;
       white-space: nowrap;
-      transition: background-color 0.2s ease;
+      transition: transform 0.15s ease, box-shadow 0.2s ease, background 0.2s ease;
       display: flex;
       align-items: center;
       justify-content: center;
       padding: 0 16px;
+      box-shadow: 0 6px 20px rgba(62,123,255,0.35);
     }
 
     .input-form button.icon-button {
@@ -253,7 +270,8 @@ export class GdmLiveAudio extends LitElement {
     }
 
     .input-form button:hover {
-      background: rgba(80, 120, 255, 0.8);
+      transform: translateY(-1px);
+      background: linear-gradient(180deg, rgba(110,168,255,0.65), rgba(62,123,255,0.8));
     }
 
     .input-form button.icon-button:hover {
@@ -266,7 +284,7 @@ export class GdmLiveAudio extends LitElement {
     }
 
     .input-form button[type='submit']:disabled {
-      background: rgba(80, 120, 255, 0.4);
+      background: rgba(80, 120, 255, 0.35);
       gap: 12px;
       opacity: 1; /* Override general disabled opacity */
     }
@@ -391,18 +409,17 @@ export class GdmLiveAudio extends LitElement {
     }
 
     .content-display {
-      background: rgba(0, 0, 0, 0.4);
+      background: linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0.02));
       padding: 12px 18px;
-      border-radius: 12px;
+      border-radius: 14px;
       font-family: sans-serif;
       font-size: 14px;
-      color: #eee;
+      color: var(--color-text);
       text-align: center;
-      border: 1px solid #5078ff;
-      box-shadow: 0 0 10px #5078ff;
+      border: 1px solid rgba(110,168,255,0.35);
+      box-shadow: 0 6px 24px rgba(80,120,255,0.28);
       margin-top: 8px;
-      backdrop-filter: blur(10px);
-      /* Force refresh */
+      backdrop-filter: blur(12px);
     }
     .content-display h3 {
       margin: 0 0 4px 0;
@@ -440,10 +457,10 @@ export class GdmLiveAudio extends LitElement {
 
     .media-controls button {
       outline: none;
-      border: 1px solid rgba(255, 255, 255, 0.2);
-      color: white;
+      border: 1px solid rgba(255, 255, 255, 0.22);
+      color: var(--color-text);
       border-radius: 50%;
-      background: rgba(0, 0, 0, 0.2);
+      background: linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0.02));
       width: 48px;
       height: 48px;
       cursor: pointer;
@@ -454,12 +471,15 @@ export class GdmLiveAudio extends LitElement {
       align-items: center;
       justify-content: center;
       flex-shrink: 0;
-      backdrop-filter: blur(10px);
-      -webkit-backdrop-filter: blur(10px);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      box-shadow: var(--shadow-1);
+      transition: transform 0.15s ease, box-shadow 0.2s ease;
     }
 
     .media-controls button:hover {
-      background: rgba(255, 255, 255, 0.2);
+      transform: translateY(-1px);
+      box-shadow: var(--shadow-2);
     }
 
     .media-controls button[disabled] {
@@ -508,8 +528,11 @@ export class GdmLiveAudio extends LitElement {
       background: rgba(0, 0, 0, 0.2);
       border-radius: 8px;
       line-height: 1.6;
-      color: #eee;
+      color: var(--color-text);
     }
+    .analysis-text-content::-webkit-scrollbar { width: 10px; }
+    .analysis-text-content::-webkit-scrollbar-thumb { background: rgba(110,168,255,0.35); border-radius: 8px; }
+    .analysis-text-content::-webkit-scrollbar-track { background: transparent; }
     .analysis-text-content h1,
     .analysis-text-content h2,
     .analysis-text-content h3,
@@ -607,31 +630,40 @@ export class GdmLiveAudio extends LitElement {
 
     /* Analysis Side Panel */
     .analysis-panel {
-      position: fixed;
-      top: 0;
-      left: 0;
-      height: 100vh;
-      width: var(--analysis-panel-width);
+      position: relative;
+      height: 100%;
+      width: 0;
+      flex: 0 0 0;
+      min-width: 0;
+      overflow: hidden;
       background: rgba(30, 30, 30, 0.95);
-      border-right: 1px solid rgba(255, 255, 255, 0.12);
-      box-shadow: 20px 0 30px rgba(0, 0, 0, 0.35);
-      transform: translateX(-100%);
-      transition: transform 0.35s ease;
+      border-right: none;
+      box-shadow: none;
+      transition: width 0.35s ease;
       z-index: 950; /* abaixo do overlay da timeline (1000) */
       display: flex;
       flex-direction: column;
       backdrop-filter: blur(8px);
       -webkit-backdrop-filter: blur(8px);
+      pointer-events: none; /* fechado: não captura cliques */
     }
     .analysis-panel.open {
-      transform: translateX(0);
+      width: var(--analysis-panel-width);
+      flex-basis: var(--analysis-panel-width);
+      border-right: 1px solid rgba(255, 255, 255, 0.12);
+      box-shadow: 20px 0 30px rgba(0, 0, 0, 0.35);
+      pointer-events: auto;
     }
     .analysis-panel-header {
       display: flex;
       align-items: center;
       justify-content: space-between;
       padding: 14px 18px;
+      position: sticky;
+      top: 0;
+      background: linear-gradient(180deg, rgba(16, 18, 24, 0.95), rgba(16, 18, 24, 0.7));
       border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+      z-index: 2;
     }
     .analysis-panel-header h3 {
       margin: 0;
@@ -660,6 +692,11 @@ export class GdmLiveAudio extends LitElement {
     }
     .analysis-panel .modal-actions {
       padding: 12px 16px 16px 16px;
+      position: sticky;
+      bottom: 0;
+      background: linear-gradient(0deg, rgba(16, 18, 24, 0.96), rgba(16,18,24,0.6));
+      border-top: 1px solid rgba(255,255,255,0.08);
+      z-index: 2;
     }
 
     .search-results {
@@ -768,16 +805,74 @@ export class GdmLiveAudio extends LitElement {
     .connection-status {
       position: absolute;
       top: 10px;
+      right: 54px; /* deixa espaço para o botão de config */
+    }
+    /* Settings floating button */
+    .settings-fab {
+      position: absolute;
+      top: 8px;
       right: 10px;
+      width: 36px;
+      height: 36px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: 1px solid rgba(255,255,255,0.18);
+      background: linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0.02));
+      color: #fff;
+      cursor: pointer;
+      z-index: 120;
+      box-shadow: var(--shadow-1);
+    }
+    .settings-fab:hover { box-shadow: var(--shadow-2); transform: translateY(-1px); }
+
+    /* Settings side panel (right) */
+    .settings-panel {
+      position: relative;
+      height: 100%;
+      width: 0;
+      flex: 0 0 0;
+      min-width: 0;
+      overflow: hidden;
+      background: rgba(16, 18, 24, 0.95);
+      border-left: none;
+      transition: width 0.35s ease;
+      z-index: 951;
+      display: flex;
+      flex-direction: column;
+      pointer-events: none;
+      backdrop-filter: blur(8px);
+    }
+    .settings-panel.open {
+      width: clamp(280px, 32vw, 520px);
+      flex-basis: clamp(280px, 32vw, 520px);
+      border-left: 1px solid rgba(255,255,255,0.12);
+      pointer-events: auto;
+      box-shadow: -20px 0 30px rgba(0,0,0,0.35);
+    }
+    .settings-panel-header { 
+      display:flex; align-items:center; justify-content:space-between; 
+      padding: 14px 18px; position: sticky; top:0; 
+      background: linear-gradient(180deg, rgba(16, 18, 24, 0.95), rgba(16, 18, 24, 0.7));
+      border-bottom:1px solid rgba(255,255,255,0.12);
+    }
+    .settings-panel-body { padding: 12px 16px; overflow:auto; }
+    .settings-group { margin-bottom: 16px; }
+    .settings-group label { display:block; font-size:12px; color:#cfd8ff; margin-bottom:6px; }
+    .settings-group input[type="color"],
+    .settings-group select { width: 100%; padding: 10px 12px; border-radius:10px; border:1px solid rgba(255,255,255,0.18); background: rgba(255,255,255,0.06); color:#fff; }
       display: flex;
       align-items: center;
       gap: 6px;
-      background: rgba(0, 0, 0, 0.7);
+      background: linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0.02));
       padding: 6px 12px;
       border-radius: 15px;
       font-size: 12px;
-      color: rgba(255, 255, 255, 0.8);
+      color: rgba(255, 255, 255, 0.86);
       z-index: 100;
+      border: 1px solid rgba(255,255,255,0.18);
+      box-shadow: var(--shadow-1);
     }
 
     .connection-indicator {
@@ -814,6 +909,14 @@ export class GdmLiveAudio extends LitElement {
     @keyframes blink {
       0%, 50% { opacity: 1; }
       51%, 100% { opacity: 0.3; }
+    }
+    /* Enter animation for content when panel opens */
+    .analysis-panel.open .analysis-text-content { animation: fadeIn 0.25s ease both; }
+    @keyframes fadeIn { from { opacity: 0 } to { opacity: 1 } }
+
+    @media (prefers-reduced-motion: reduce) {
+      .analysis-panel { transition: none; }
+      .input-form button, .media-controls button { transition: none; }
     }
   `;
 
@@ -2086,73 +2189,165 @@ Seu papel é:
 
   private async downloadPdf() {
     if (!this.analysisResult) return;
-    const contentElement = this.shadowRoot?.getElementById(
-      'analysis-content-for-pdf',
-    );
+    // Primeira tentativa: pdfmake (tipográfico)
+    try {
+      // Carrega via CDN para evitar problemas de resolução no bundler
+      const loadScript = (url: string) => new Promise<void>((resolve, reject) => {
+        const s = document.createElement('script');
+        s.src = url;
+        s.async = true;
+        s.onload = () => resolve();
+        s.onerror = () => reject(new Error(`Falha ao carregar script: ${url}`));
+        document.head.appendChild(s);
+      });
+      if (!pdfMake) {
+        await loadScript('https://cdn.jsdelivr.net/npm/pdfmake@0.2.10/build/pdfmake.min.js');
+        await loadScript('https://cdn.jsdelivr.net/npm/pdfmake@0.2.10/build/vfs_fonts.js');
+        pdfMake = (window as any).pdfMake;
+      }
+      if (!htmlToPdfmakeFn) {
+        await loadScript('https://cdn.jsdelivr.net/npm/html-to-pdfmake@2.5.0/browser.js');
+        htmlToPdfmakeFn = (window as any).htmlToPdfmake;
+      }
+      const container = document.createElement('div');
+      container.style.position = 'fixed';
+      container.style.left = '-10000px';
+      container.style.top = '0';
+      container.style.width = '800px';
+      container.innerHTML = marked.parse(this.analysisResult);
+      document.body.appendChild(container);
+
+      const content = htmlToPdfmakeFn(container.innerHTML, {
+        defaultStyles: {
+          h1: { fontSize: 18, bold: true, margin: [0, 12, 0, 6] },
+          h2: { fontSize: 16, bold: true, margin: [0, 10, 0, 5] },
+          h3: { fontSize: 14, bold: true, margin: [0, 8, 0, 4] },
+          p: { margin: [0, 5, 0, 5], fontSize: 11, lineHeight: 1.35 },
+          li: { margin: [0, 3, 0, 3], fontSize: 11, lineHeight: 1.35 },
+          strong: { bold: true },
+          em: { italics: true },
+          code: { fontSize: 10, color: '#222' }
+        }
+      });
+
+      (pdfMake as any).vfs = (pdfFonts as any).pdfMake.vfs;
+      const sanitizedTitle = this.processedContentInfo
+        ? this.sanitizeFilename(this.processedContentInfo.title)
+        : 'analise';
+
+      const docDef: any = {
+        pageSize: 'A4',
+        pageMargins: [40, 60, 40, 60],
+        defaultStyle: { fontSize: 11, lineHeight: 1.35 },
+        styles: {
+          header: { fontSize: 18, bold: true, margin: [0, 0, 0, 10] },
+          subheader: { fontSize: 14, bold: true, margin: [0, 10, 0, 5] },
+          small: { fontSize: 9 }
+        },
+        header: (currentPage: number, pageCount: number) => ({
+          columns: [
+            { text: this.processedContentInfo?.title || 'Análise do Conteúdo', style: 'small' },
+            { text: `${currentPage} / ${pageCount}`, alignment: 'right', style: 'small' },
+          ],
+          margin: [40, 20, 40, 0]
+        }),
+        footer: (currentPage: number, pageCount: number) => ({
+          columns: [
+            { text: 'Gerado pelo Assistente', style: 'small' },
+            { text: new Date().toLocaleString('pt-BR'), alignment: 'right', style: 'small' }
+          ],
+          margin: [40, 0, 40, 20]
+        }),
+        content
+      };
+
+      await new Promise<void>((resolve) => {
+        (pdfMake as any).createPdf(docDef).download(`${sanitizedTitle}.pdf`, resolve);
+      });
+      document.body.removeChild(container);
+      this.updateStatus('PDF (tipográfico) gerado com sucesso!');
+      this.logEvent('Análise baixada como PDF tipográfico.', 'info');
+      return;
+    } catch (e) {
+      console.warn('pdfmake falhou, caindo para render por imagem:', e);
+    }
+
+    const contentElement = this.shadowRoot?.getElementById('analysis-content-for-pdf');
     if (!contentElement) {
-      console.error('Não foi possível encontrar o conteúdo para gerar o PDF.');
+      this.updateError('Não foi possível encontrar o conteúdo para gerar o PDF.');
       return;
     }
     this.updateStatus('Gerando PDF...');
     this.logEvent('Iniciando geração de PDF.', 'process');
 
-    // Inject a temporary stylesheet to ensure content is visible on a white background
-    const tempStyle = document.createElement('style');
-    tempStyle.id = 'temp-pdf-style';
-    tempStyle.innerHTML = `
-      #analysis-content-for-pdf {
-        background-color: white !important;
-      }
-      #analysis-content-for-pdf,
-      #analysis-content-for-pdf * {
-        color: black !important;
-        text-shadow: none !important;
-      }
-      #analysis-content-for-pdf blockquote {
-        color: #333 !important;
-        border-left-color: #ccc !important;
-      }
-      #analysis-content-for-pdf code {
-        background: #f0f0f0 !important;
-        color: #333 !important;
-      }
-      #analysis-content-for-pdf a {
-        color: #0000ee !important;
-        text-decoration: underline !important;
-      }
-    `;
-    this.shadowRoot?.appendChild(tempStyle);
+    // Cria um container temporário no light DOM para o html2canvas (evita problemas com Shadow DOM)
+    const wrapper = document.createElement('div');
+    wrapper.style.position = 'fixed';
+    wrapper.style.left = '-10000px';
+    wrapper.style.top = '0';
+    wrapper.style.background = '#ffffff';
+    wrapper.style.color = '#000000';
+    wrapper.style.padding = '20px';
+    wrapper.style.width = `${contentElement.clientWidth || 700}px`;
+    wrapper.style.zIndex = '-1';
+    const clone = contentElement.cloneNode(true) as HTMLElement;
+    // Garante contrastes no PDF
+    clone.querySelectorAll('*').forEach((el: Element) => {
+      (el as HTMLElement).style.color = '#000000';
+      (el as HTMLElement).style.textShadow = 'none';
+    });
+    wrapper.appendChild(clone);
+    document.body.appendChild(wrapper);
 
     try {
+      await new Promise((r) => requestAnimationFrame(r));
+      const canvas = await html2canvas(wrapper, {
+        scale: 2,
+        useCORS: true,
+        backgroundColor: '#ffffff',
+        windowWidth: wrapper.scrollWidth,
+      });
+
+      const pdf = new jsPDF({ orientation: 'p', unit: 'pt', format: 'a4' });
+      const pageWidth = pdf.internal.pageSize.getWidth();
+      const pageHeight = pdf.internal.pageSize.getHeight();
+      const margin = 40;
+      const imgWidth = pageWidth - margin * 2;
+      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+
+      if (imgHeight <= pageHeight - margin * 2) {
+        const imgData = canvas.toDataURL('image/png');
+        pdf.addImage(imgData, 'PNG', margin, margin, imgWidth, imgHeight, undefined, 'FAST');
+      } else {
+        // Paginação manual por fatias verticais
+        const pageHeightPx = (pageHeight - margin * 2) * (canvas.width / imgWidth);
+        let y = 0;
+        while (y < canvas.height) {
+          const segmentHeight = Math.min(pageHeightPx, canvas.height - y);
+          const segmentCanvas = document.createElement('canvas');
+          segmentCanvas.width = canvas.width;
+          segmentCanvas.height = segmentHeight;
+          const ctx = segmentCanvas.getContext('2d')!;
+          ctx.drawImage(canvas, 0, y, canvas.width, segmentHeight, 0, 0, canvas.width, segmentHeight);
+          const imgData = segmentCanvas.toDataURL('image/png');
+          const h = (segmentHeight * imgWidth) / canvas.width;
+          pdf.addImage(imgData, 'PNG', margin, margin, imgWidth, h, undefined, 'FAST');
+          y += segmentHeight;
+          if (y < canvas.height) pdf.addPage();
+        }
+      }
+
       const sanitizedTitle = this.processedContentInfo
         ? this.sanitizeFilename(this.processedContentInfo.title)
         : 'analise';
-
-      const pdf = new jsPDF({
-        orientation: 'p',
-        unit: 'pt',
-        format: 'a4',
-      });
-
-      const doc = await pdf.html(contentElement, {
-        margin: [40, 40, 40, 40],
-        autoPaging: 'text',
-        html2canvas: {
-          scale: 0.7,
-          useCORS: true,
-          backgroundColor: '#ffffff', // Explicitly set a white background
-        },
-        width: 515,
-        windowWidth: contentElement.scrollWidth,
-      });
-      doc.save(`${sanitizedTitle}.pdf`);
+      pdf.save(`${sanitizedTitle}.pdf`);
       this.updateStatus('PDF gerado com sucesso!');
       this.logEvent('Análise baixada como PDF.', 'info');
     } catch (err) {
       console.error('Falha ao gerar o PDF:', err);
+      this.updateError('Falha ao gerar o PDF.');
     } finally {
-      // Always remove the temporary stylesheet
-      this.shadowRoot?.getElementById('temp-pdf-style')?.remove();
+      wrapper.remove();
     }
   }
 
@@ -2209,13 +2404,16 @@ Seu papel é:
     return html`
       <div class="app-content ${this.showAnalysisModal ? 'with-panel' : ''}">
         <!-- Connection Status Indicator -->
+        <button class="settings-fab" @click=${() => (this.showSettings = !this.showSettings)} aria-label="Abrir configurações">
+          <svg xmlns="http://www.w3.org/2000/svg" height="22" viewBox="0 -960 960 960" width="22" fill="#fff"><path d="M400-80v-120q-20-6-38.5-14T325-230l-105 60-80-140 105-60q-2-10-3.5-19.5T240-410h-120v-160h120q2-11 3.5-20t6.5-20l-105-60 80-140 105 60q16-12 34.5-20t38.5-14v-120h160v120q20 6 38.5 14t34.5 20l105-60 80 140-105 60q5 10 6.5 19.5t3.5 20.5h120v160H720q-2 11-3.5 20t-6.5 20l105 60-80 140-105-60q-16 12-34.5 20t-38.5 14v120H400Zm80-280q50 0 85-35t35-85q0-50-35-85t-85-35q-50 0-85 35t-35 85q0 50 35 85t85 35Z"/></svg>
+        </button>
         <div class="connection-status">
           <div class="connection-indicator ${this.connectionState}"></div>
           <span>${this.getConnectionStatusText()}</span>
         </div>
 
         <!-- Analysis side panel (non-blocking) -->
-        <div class="analysis-panel ${this.showAnalysisModal ? 'open' : ''}">
+        <div class="analysis-panel ${this.showAnalysisModal ? 'open' : ''}" aria-hidden=${!this.showAnalysisModal}>
           <div class="analysis-panel-header">
             <h3>Análise do Conteúdo</h3>
             <button class="close-btn" @click=${() => (this.showAnalysisModal = false)} aria-label="Fechar painel">
@@ -2251,7 +2449,9 @@ Seu papel é:
             </button>
           </div>
         </div>
-        ${this.showTimelineModal
+
+        <div class="main-stage">
+          ${this.showTimelineModal
           ? html`
               <div
                 class="modal-overlay"
@@ -2500,9 +2700,38 @@ Seu papel é:
           </div>
         </div>
 
-        <gdm-live-audio-visuals-3d
-          .inputNode=${this.inputNode}
-          .outputNode=${this.outputNode}></gdm-live-audio-visuals-3d>
+          <gdm-live-audio-visuals-3d
+            .inputNode=${this.inputNode}
+            .outputNode=${this.outputNode}></gdm-live-audio-visuals-3d>
+        </div>
+        <div class="settings-panel ${this.showSettings ? 'open' : ''}">
+          <div class="settings-panel-header">
+            <h3>Configurações</h3>
+            <button class="close-btn" @click=${() => (this.showSettings = false)}>Fechar</button>
+          </div>
+          <div class="settings-panel-body">
+            <div class="settings-group">
+              <label>Cor de Fundo</label>
+              <input type="color" value="#0a0a0c" @change=${(e: any) => {
+                const color = e.target.value; 
+                document.documentElement.style.setProperty('--assistant-bg', color);
+                this.logEvent(`Fundo alterado para ${color}`, 'info');
+              }} />
+            </div>
+            <div class="settings-group">
+              <label>Voz</label>
+              <select @change=${(e: any) => { /* placeholder para futuras vozes */ }}>
+                <option selected>Orus (padrão)</option>
+              </select>
+            </div>
+            <div class="settings-group">
+              <label>Efeito Visual</label>
+              <select @change=${(e: any) => { /* placeholder para efeitos */ }}>
+                <option selected>Brilho padrão</option>
+              </select>
+            </div>
+          </div>
+        </div>
       </div>
     `;
   }

@@ -28,6 +28,7 @@ import {vs as sphereVS} from './sphere-shader';
 export class GdmLiveAudioVisuals3D extends LitElement {
   private inputAnalyser!: Analyser;
   private outputAnalyser!: Analyser;
+  private scene!: THREE.Scene;
   private camera!: THREE.PerspectiveCamera;
   private backdrop!: THREE.Mesh;
   private composer!: EffectComposer;
@@ -77,8 +78,11 @@ export class GdmLiveAudioVisuals3D extends LitElement {
   }
 
   private init() {
-    const scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x100c14);
+    this.scene = new THREE.Scene();
+    // Cor de fundo ajustável via CSS var (fallback para preto profundo)
+    const styleBg = getComputedStyle(document.documentElement).getPropertyValue('--assistant-bg');
+    const hex = styleBg?.trim() || '#05070b';
+    this.scene.background = new THREE.Color(hex);
 
     const backdrop = new THREE.Mesh(
       new THREE.IcosahedronGeometry(10, 5),
@@ -93,7 +97,7 @@ export class GdmLiveAudioVisuals3D extends LitElement {
       }),
     );
     backdrop.material.side = THREE.BackSide;
-    scene.add(backdrop);
+    this.scene.add(backdrop);
     this.backdrop = backdrop;
 
     const camera = new THREE.PerspectiveCamera(
@@ -113,15 +117,15 @@ export class GdmLiveAudioVisuals3D extends LitElement {
 
     const geometry = new THREE.IcosahedronGeometry(1, 10);
 
+    const pmremGenerator = new THREE.PMREMGenerator(renderer);
+    pmremGenerator.compileEquirectangularShader();
+
     new EXRLoader().load('piz_compressed.exr', (texture: THREE.Texture) => {
       texture.mapping = THREE.EquirectangularReflectionMapping;
       const exrCubeRenderTarget = pmremGenerator.fromEquirectangular(texture);
       sphereMaterial.envMap = exrCubeRenderTarget.texture;
       sphere.visible = true;
     });
-
-    const pmremGenerator = new THREE.PMREMGenerator(renderer);
-    pmremGenerator.compileEquirectangularShader();
 
     const sphereMaterial = new THREE.MeshStandardMaterial({
       color: 0x000010,
@@ -142,12 +146,12 @@ export class GdmLiveAudioVisuals3D extends LitElement {
     };
 
     const sphere = new THREE.Mesh(geometry, sphereMaterial);
-    scene.add(sphere);
+    this.scene.add(sphere);
     sphere.visible = false;
 
     this.sphere = sphere;
 
-    const renderPass = new RenderPass(scene, camera);
+    const renderPass = new RenderPass(this.scene, camera);
 
     const bloomPass = new UnrealBloomPass(
       new THREE.Vector2(window.innerWidth, window.innerHeight),
