@@ -1,8 +1,0 @@
-{
-  "requestFramePermissions": [
-    "microphone"
-  ],
-  "name": "Live gemini Assistent.",
-  "description": "",
-  "prompt": ""
-}
